@@ -6,13 +6,15 @@
 
 (function(global) {
 
-var SERVER_ENDPOINT = 'http://loggio.herokuapp.com/endpoint';
+//var SERVER_ENDPOINT = 'http://loggio.herokuapp.com/endpoint';
+var SERVER_ENDPOINT = 'http://localhost:3000/endpoint';
 
 var polling = false,
     pollingInterval = 1500,
     intervalID,
     lastID = 0,
     deviceID = 0,
+    deviceGroupID = 0,
     registered = false;
 
 function extend(destination, origin) {
@@ -95,6 +97,17 @@ function getInstructions(data, interval) {
   }, interval);
 };
 
+function mapDOM(element) {
+  var now = Date.now(),
+      rand = Math.random() * now,
+      id = Math.ceil(now + rand);
+
+  element.setAttribute('data-loggid', id);
+
+  for (var i = 0; i < element.children.length; i++) {
+    mapDOM(element.children[i]);
+  }
+};
 var Async = {
   request: function(request_type, options) {
     options = options || {};
@@ -129,16 +142,22 @@ var Logg = {
     this.settings['identifier'] = Date.now();
     this.settings['navigator'] = navigator.userAgent;
 
-    extend(this.settings, options);
+    this.settings = extend(this.settings, options);
+
+    var data = {
+      'identifier': this.settings['identifier'] + identifierFromUserAgent(),
+      'navigator': this.settings['navigator'],
+      'name': this.settings['name'] + ' (' + navigator.platform + ')',
+      'client_key': this.settings['client_key']
+    };
+
+    if (this.settings['group']) {
+      data['group'] = this.settings['group'];
+    }
 
     Async.post({
       url: SERVER_ENDPOINT + '/register',
-      data: {
-        'identifier': this.settings['identifier'] + identifierFromUserAgent(),
-        'navigator': this.settings['navigator'],
-        'name': this.settings['name'] + ' (' + navigator.platform + ')',
-        'client_key': this.settings['client_key']
-      },
+      data: data,
       onload: function(response) {
         registered = true;
 
@@ -149,9 +168,16 @@ var Logg = {
           deviceID = response.device_id;
         }
 
+        if (response.device_group_id) {
+          deviceGroupID = response.device_group_id;
+        }
+
         Logg.init();
       }
     });
+
+    mapDOM(document.documentElement);
+    Logg.initHighlight();
   },
   init: function() {
     if (Logg.log) {
@@ -223,14 +249,18 @@ for (var i in consoleMethods) {
   })(method);
 }
 Logg.boxModel = function(selector) {
-  var element = document.querySelector(selector);
-  var style = window.getComputedStyle(element);
+  if (!('querySelector' in global.document) && !('getComputedStyle' in global)) {
+    return false;
+  }
+
+  var element = global.document.querySelector(selector),
+      style = global.getComputedStyle(element);
 
   var content = {};
 
   content[selector] = {
-    'contentWidth': parseInt(style.width),
-    'contentHeight': parseInt(style.height),
+    'contentWidth': parseInt(style.width) - parseInt(style.paddingLeft) - parseInt(style.paddingRight) - parseInt(style.borderLeftWidth) - parseInt(style.borderRightWidth),
+    'contentHeight': parseInt(style.height) - parseInt(style.paddingTop) - parseInt(style.paddingBottom) - parseInt(style.borderTopWidth) - parseInt(style.borderBottomWidth),
     'borderTopWidth': parseInt(style.borderTopWidth),
     'borderBottomWidth': parseInt(style.borderBottomWidth),
     'borderLeftWidth': parseInt(style.borderLeftWidth),
@@ -262,10 +292,114 @@ Logg.boxModel = function(selector) {
   });
 };
 
+Logg.highlightElement = function(element) {
+  if ((typeof element === 'string') && ('querySelector' in global.document)) {
+    element = global.document.querySelector(element);
+  }
+
+  if (!element) {
+    return false;
+  }
+
+  if (!('getBoundingClientRect' in element) && !('getComputedStyle' in global)) {
+    return false;
+  }
+
+  var style = global.getComputedStyle(element),
+      boundingRectangle = element.getBoundingClientRect();
+
+  var boxModel = {
+    'contentWidth': parseInt(style.width) - parseInt(style.paddingLeft) - parseInt(style.paddingRight) - parseInt(style.borderLeftWidth) - parseInt(style.borderRightWidth),
+    'contentHeight': parseInt(style.height) - parseInt(style.paddingTop) - parseInt(style.paddingBottom) - parseInt(style.borderTopWidth) - parseInt(style.borderBottomWidth),
+    'borderTopWidth': parseInt(style.borderTopWidth),
+    'borderBottomWidth': parseInt(style.borderBottomWidth),
+    'borderLeftWidth': parseInt(style.borderLeftWidth),
+    'borderRightWidth': parseInt(style.borderRightWidth),
+    'marginTop': parseInt(style.marginTop),
+    'marginBottom': parseInt(style.marginBottom),
+    'marginLeft': parseInt(style.marginLeft),
+    'marginRight': parseInt(style.marginRight),
+    'paddingTop': parseInt(style.paddingTop),
+    'paddingBottom': parseInt(style.paddingBottom),
+    'paddingLeft': parseInt(style.paddingLeft),
+    'paddingRight': parseInt(style.paddingRight)
+  };
+
+  var marginContainer = document.getElementById('margin_container'),
+      borderContainer = document.getElementById('border_container'),
+      paddingContainer = document.getElementById('padding_container'),
+      contentContainer = document.getElementById('content_container');
+
+  marginContainer.style.top = (boundingRectangle.top - boxModel.marginTop) + 'px';
+  marginContainer.style.left = (boundingRectangle.left - boxModel.marginLeft) + 'px';
+  marginContainer.style.width = (boxModel.contentWidth + boxModel.paddingLeft + boxModel.paddingRight + boxModel.marginLeft + boxModel.marginRight) + 'px';
+  marginContainer.style.height = (boxModel.contentHeight + boxModel.paddingTop + boxModel.paddingBottom + boxModel.marginTop + boxModel.marginBottom) + 'px';
+
+  borderContainer.style.top = boxModel.marginTop + 'px';
+  borderContainer.style.left = boxModel.marginLeft + 'px';
+  borderContainer.style.width = (boxModel.contentWidth + boxModel.paddingLeft + boxModel.paddingRight + boxModel.borderLeftWidth + boxModel.borderRightWidth) + 'px';
+  borderContainer.style.height = (boxModel.contentHeight + boxModel.paddingTop + boxModel.paddingBottom + boxModel.borderTopWidth + boxModel.borderBottomWidth) + 'px';
+
+  paddingContainer.style.top = 0 + 'px';
+  paddingContainer.style.left = 0 + 'px';
+  paddingContainer.style.width = (boxModel.contentWidth + boxModel.paddingLeft + boxModel.paddingRight) + 'px';
+  paddingContainer.style.height = (boxModel.contentHeight + boxModel.paddingTop + boxModel.paddingBottom) + 'px';
+
+  contentContainer.style.top = boxModel.paddingTop + 'px';
+  contentContainer.style.left = boxModel.paddingLeft + 'px';
+  contentContainer.style.width = boxModel.contentWidth + 'px';
+  contentContainer.style.height = boxModel.contentHeight + 'px';
+};
+
+Logg.initHighlight = function() {
+  var marginContainer = document.createElement('div'),
+      borderContainer = document.createElement('div'),
+      paddingContainer = document.createElement('div'),
+      contentContainer = document.createElement('div');
+
+  marginContainer.id = 'margin_container';
+  borderContainer.id = 'border_container';
+  paddingContainer.id = 'padding_container';
+  contentContainer.id = 'content_container';
+
+  marginContainer.style.position = 'absolute';
+  borderContainer.style.position = 'absolute';
+  paddingContainer.style.position = 'absolute';
+  contentContainer.style.position = 'absolute';
+
+  marginContainer.style.backgroundColor = 'rgb(211, 84, 0)';
+  borderContainer.style.backgroundColor = 'rgb(243, 156, 18)';
+  paddingContainer.style.backgroundColor = 'rgb(39, 174, 96)';
+  contentContainer.style.backgroundColor = 'rgb(41, 128, 185)';
+
+  marginContainer.style.opacity = '0.6';
+
+  paddingContainer.appendChild(contentContainer);
+  borderContainer.appendChild(paddingContainer);
+  marginContainer.appendChild(borderContainer);
+
+  marginContainer.style.width = '0px';
+  marginContainer.style.height = '0px';
+  marginContainer.style.zIndex = 616;
+  marginContainer.style.overflow = 'hidden';
+
+  global.document.body.appendChild(marginContainer);
+};
+
+Logg.resetHighlight = function() {
+  var highlight = global.document.getElementById('margin_container');
+  highlight.style.width = '0px';
+  highlight.style.height = '0px';
+};
+
 Logg.getComputedStyle = function(selector) {
-  var element = document.querySelector(selector),
+  if (!('querySelector' in global.document) && !('getComputedStyle' in global)) {
+    return false;
+  }
+  
+  var element = global.document.querySelector(selector),
       content = {},
-      computedStyles = window.getComputedStyle(element),
+      computedStyles = global.getComputedStyle(element),
       properties = Array.prototype.slice.call(computedStyles, 0);
 
   content[selector] = {};
@@ -289,6 +423,29 @@ Logg.getComputedStyle = function(selector) {
   });
 };
 
+Logg.getDOM = function() {
+  var node = document.doctype,
+      doctypeHTML = '';
+
+  if (node) {
+    var doctypeHTML = "<!DOCTYPE "
+                       + node.name
+                       + (node.publicId ? ' PUBLIC "' + node.publicId + '"' : '')
+                       + (!node.publicId && node.systemId ? ' SYSTEM' : '') 
+                       + (node.systemId ? ' "' + node.systemId + '"' : '')
+                       + '>';
+  }
+
+  var data = {
+    'message_type': 'dom',
+    'content': doctypeHTML + document.documentElement.outerHTML
+  };
+
+  Async.post({
+    url: SERVER_ENDPOINT + '/messages',
+    data: data
+  });
+};
 Logg.getNavigator = function() {
   var data = {
     'message_type': 'navigator',

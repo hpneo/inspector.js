@@ -37,10 +37,17 @@ module.exports = function(grunt) {
           '*/\n'
         }
       }
+    },
+    copy: {
+      main: {
+        src: 'inspector.min.js',
+        dest: '../logg.io/public/inspector.js'
+      }
     }
   });
 
   grunt.loadNpmTasks('grunt-contrib-concat');
   grunt.loadNpmTasks('grunt-contrib-uglify');
-  grunt.registerTask('default', ['concat', 'uglify']);
+  grunt.loadNpmTasks('grunt-contrib-copy');
+  grunt.registerTask('default', ['concat', 'uglify', 'copy']);
 };
