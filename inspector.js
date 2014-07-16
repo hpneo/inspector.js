@@ -6,8 +6,8 @@
 
 (function(global) {
 
-//var SERVER_ENDPOINT = 'http://loggio.herokuapp.com/endpoint';
-var SERVER_ENDPOINT = 'http://localhost:3000/endpoint';
+var SERVER_ENDPOINT = 'http://loggio.herokuapp.com/endpoint';
+//var SERVER_ENDPOINT = 'http://localhost:3000/endpoint';
 
 var polling = false,
     pollingInterval = 1500,
