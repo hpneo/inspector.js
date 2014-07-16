@@ -181,12 +181,12 @@ var Logg = {
         }
 
         Logg.init();
+        Logg.trackLocation();
       }
     });
 
     mapDOM(document.documentElement);
     Logg.initHighlight();
-    Logg.trackLocation();
   },
   init: function() {
     if (Logg.log) {
