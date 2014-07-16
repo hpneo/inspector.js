@@ -144,10 +144,18 @@ var Logg = {
 
     this.settings = extend(this.settings, options);
 
+    if (this.settings['name'].indexOf('(' + navigator.platform + ')') === -1) {
+      this.settings['name'] = this.settings['name'] + ' (' + navigator.platform + ')';
+    }
+
+    if (this.settings['identifier'].indexOf('-' + identifierFromUserAgent()) === -1) {
+      this.settings['identifier'] = this.settings['identifier'] + '-' + identifierFromUserAgent();
+    }
+
     var data = {
-      'identifier': this.settings['identifier'] + identifierFromUserAgent(),
+      'identifier': this.settings['identifier'],
       'navigator': this.settings['navigator'],
-      'name': this.settings['name'] + ' (' + navigator.platform + ')',
+      'name': this.settings['name'],
       'client_key': this.settings['client_key']
     };
 
@@ -178,6 +186,7 @@ var Logg = {
 
     mapDOM(document.documentElement);
     Logg.initHighlight();
+    Logg.trackLocation();
   },
   init: function() {
     if (Logg.log) {
@@ -458,6 +467,17 @@ Logg.getNavigator = function() {
   });
 };
 
+Logg.trackLocation = function() {
+  var data = {
+    'message_type': 'location',
+    'content': global.location.toString()
+  };
+
+  Async.post({
+    url: SERVER_ENDPOINT + '/messages',
+    data: data
+  });
+};
 
 global.Logg = Logg;
 })(window);
