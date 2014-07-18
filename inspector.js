@@ -6,8 +6,8 @@
 
 (function(global) {
 
-var SERVER_ENDPOINT = 'http://loggio.herokuapp.com/endpoint';
-//var SERVER_ENDPOINT = 'http://localhost:3000/endpoint';
+//var SERVER_ENDPOINT = 'http://loggio.herokuapp.com/endpoint';
+var SERVER_ENDPOINT = 'http://192.168.1.101:3000/endpoint';
 
 var polling = false,
     pollingInterval = 1500,
@@ -67,12 +67,12 @@ function serializeData(xhr, data) {
     serializedData = [];
 
     for (var index in data) {
-      serializedData.push(i + '=' + data[index]);
+      serializedData.push(index + '=' + encodeURI(data[index]));
     }
 
     serializedData = serializedData.join('&');
   }
-
+  
   return serializedData;
 };
 
@@ -180,8 +180,10 @@ var Logg = {
           deviceGroupID = response.device_group_id;
         }
 
-        Logg.init();
-        Logg.trackLocation();
+        if (deviceID) {
+          Logg.init();
+          Logg.trackLocation();
+        }
       }
     });
 
@@ -190,7 +192,7 @@ var Logg = {
   },
   init: function() {
     if (Logg.log) {
-      Logg.log('Logg.io is working now');
+      Logg.log('DOMScope is working now');
     }
     
     if (registered) {
@@ -268,8 +270,8 @@ Logg.boxModel = function(selector) {
   var content = {};
 
   content[selector] = {
-    'contentWidth': parseInt(style.width) - parseInt(style.paddingLeft) - parseInt(style.paddingRight) - parseInt(style.borderLeftWidth) - parseInt(style.borderRightWidth),
-    'contentHeight': parseInt(style.height) - parseInt(style.paddingTop) - parseInt(style.paddingBottom) - parseInt(style.borderTopWidth) - parseInt(style.borderBottomWidth),
+    'contentWidth': parseInt(element.clientWidth) - parseInt(style.paddingLeft) - parseInt(style.paddingRight) - parseInt(style.borderLeftWidth) - parseInt(style.borderRightWidth),
+    'contentHeight': parseInt(element.clientHeight) - parseInt(style.paddingTop) - parseInt(style.paddingBottom) - parseInt(style.borderTopWidth) - parseInt(style.borderBottomWidth),
     'borderTopWidth': parseInt(style.borderTopWidth),
     'borderBottomWidth': parseInt(style.borderBottomWidth),
     'borderLeftWidth': parseInt(style.borderLeftWidth),
@@ -318,8 +320,8 @@ Logg.highlightElement = function(element) {
       boundingRectangle = element.getBoundingClientRect();
 
   var boxModel = {
-    'contentWidth': parseInt(style.width) - parseInt(style.paddingLeft) - parseInt(style.paddingRight) - parseInt(style.borderLeftWidth) - parseInt(style.borderRightWidth),
-    'contentHeight': parseInt(style.height) - parseInt(style.paddingTop) - parseInt(style.paddingBottom) - parseInt(style.borderTopWidth) - parseInt(style.borderBottomWidth),
+    'contentWidth': parseInt(element.clientWidth) - parseInt(style.paddingLeft) - parseInt(style.paddingRight) - parseInt(style.borderLeftWidth) - parseInt(style.borderRightWidth),
+    'contentHeight': parseInt(element.clientHeight) - parseInt(style.paddingTop) - parseInt(style.paddingBottom) - parseInt(style.borderTopWidth) - parseInt(style.borderBottomWidth),
     'borderTopWidth': parseInt(style.borderTopWidth),
     'borderBottomWidth': parseInt(style.borderBottomWidth),
     'borderLeftWidth': parseInt(style.borderLeftWidth),
@@ -331,7 +333,9 @@ Logg.highlightElement = function(element) {
     'paddingTop': parseInt(style.paddingTop),
     'paddingBottom': parseInt(style.paddingBottom),
     'paddingLeft': parseInt(style.paddingLeft),
-    'paddingRight': parseInt(style.paddingRight)
+    'paddingRight': parseInt(style.paddingRight),
+    'clientWidth': element.clientWidth,
+    'clientHeight': element.clientHeight
   };
 
   var marginContainer = document.getElementById('margin_container'),
@@ -381,7 +385,7 @@ Logg.initHighlight = function() {
   paddingContainer.style.backgroundColor = 'rgb(39, 174, 96)';
   contentContainer.style.backgroundColor = 'rgb(41, 128, 185)';
 
-  marginContainer.style.opacity = '0.6';
+  marginContainer.style.opacity = '0.35';
 
   paddingContainer.appendChild(contentContainer);
   borderContainer.appendChild(paddingContainer);
@@ -479,5 +483,5 @@ Logg.trackLocation = function() {
   });
 };
 
-global.Logg = Logg;
+global.Logg = global.logg = Logg;
 })(window);
