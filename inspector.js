@@ -7,7 +7,7 @@
 (function(global) {
 
 //var SERVER_ENDPOINT = 'http://loggio.herokuapp.com/endpoint';
-var SERVER_ENDPOINT = 'http://192.168.1.101:3000/endpoint';
+var SERVER_ENDPOINT = 'http://' + location.hostname + ':3000' + '/endpoint';
 
 var polling = false,
     pollingInterval = 1500,
@@ -483,5 +483,5 @@ Logg.trackLocation = function() {
   });
 };
 
-global.Logg = global.logg = Logg;
+global.Logg = global.logg = global.scope = Logg;
 })(window);
