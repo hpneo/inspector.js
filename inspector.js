@@ -67,7 +67,7 @@ function serializeData(xhr, data) {
     serializedData = [];
 
     for (var index in data) {
-      serializedData.push(index + '=' + encodeURI(data[index]));
+      serializedData.push(index + '=' + encodeURIComponent(data[index]));
     }
 
     serializedData = serializedData.join('&');
