@@ -294,7 +294,8 @@ Logg.boxModel = function(selector) {
 
   var data = {
     'message_type': 'box_model',
-    'content': JSON.stringify(content)
+    'content': JSON.stringify(content),
+    'in_reply_to': lastID
   };
 
   Async.post({
@@ -427,7 +428,8 @@ Logg.getComputedStyle = function(selector) {
 
   var data = {
     'message_type': 'computed_style',
-    'content': JSON.stringify(content)
+    'content': JSON.stringify(content),
+    'in_reply_to': lastID
   };
 
   Async.post({
@@ -451,7 +453,8 @@ Logg.getDOM = function() {
 
   var data = {
     'message_type': 'dom',
-    'content': doctypeHTML + document.documentElement.outerHTML
+    'content': doctypeHTML + document.documentElement.outerHTML,
+    'in_reply_to': lastID
   };
 
   Async.post({
