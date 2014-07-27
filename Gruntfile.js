@@ -15,6 +15,8 @@ module.exports = function(grunt) {
       dist: {
         src: [
           'lib/begin.js',
+          'lib/xhr.js',
+          'lib/native.js',
           'lib/helpers.js',
           'lib/async.js',
           'lib/core.js',
