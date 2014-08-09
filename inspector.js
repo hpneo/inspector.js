@@ -21,7 +21,7 @@ var XMLHttpRequest = function XMLHttpRequest() {
   self.status = self.xhr.status;
   self.statusText = self.xhr.statusText;
 
-  this.xhr.addEventListener('readystatechange', function() {
+  self.xhr.addEventListener('readystatechange', function() {
     self.readyState = self.xhr.readyState;
     self.response = self.xhr.response;
     self.responseText = self.xhr.responseText;
@@ -280,7 +280,10 @@ function preJSON(object) {
     linearObject = object;
   }
   else if (object instanceof Document) {
-    linearObject = 'document';
+    linearObject = '#document';
+  }
+  else if (object instanceof Window) {
+    linearObject = 'window';
   }
   else if (object instanceof Comment) {
     linearObject = '<!--' + object.nodeValue + '-->';
@@ -371,29 +374,45 @@ var Async = {
 var Logg = {
   settings: {},
   register: function(options) {
-    this.settings['identifier'] = Date.now();
     this.settings['navigator'] = navigator.userAgent;
 
-    this.settings = extend(this.settings, options);
+    //this.settings = extend(this.settings, options);
+
+    var baseIdentifier = options['identifier'];
+
+    if (options['name']) {
+      this.settings['name'] = options['name'];
+    }
+    else {
+      this.settings['name'] = baseIdentifier.replace(/-/g, ' ');
+      this.settings['name'] = this.settings['name'].toUpperCase() + this.settings['name'].substring(1);
+    }
 
     if (this.settings['name'].indexOf('(' + navigator.platform + ')') === -1) {
       this.settings['name'] = this.settings['name'] + ' (' + navigator.platform + ')';
     }
 
-    if (this.settings['identifier'].indexOf('-' + identifierFromUserAgent()) === -1) {
-      this.settings['identifier'] = this.settings['identifier'] + '-' + identifierFromUserAgent();
+    if (baseIdentifier.indexOf('-' + identifierFromUserAgent()) === -1) {
+      this.settings['identifier'] = baseIdentifier + '-' + identifierFromUserAgent();
+    }
+    else {
+      this.settings['identifier'] = baseIdentifier;
+    }
+
+    if (options['group']) {
+      this.settings['group'] = options['group'];
+    }
+    else {
+      this.settings['group'] = baseIdentifier.replace('-' + identifierFromUserAgent(), '');
     }
 
     var data = {
       'identifier': this.settings['identifier'],
       'navigator': this.settings['navigator'],
       'name': this.settings['name'],
-      'client_key': this.settings['client_key']
+      'client_key': this.settings['client_key'],
+      'group': this.settings['group']
     };
-
-    if (this.settings['group']) {
-      data['group'] = this.settings['group'];
-    }
 
     Async.post({
       url: SERVER_ENDPOINT + '/register',
