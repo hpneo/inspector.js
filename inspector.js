@@ -5,10 +5,20 @@
 */
 
 (function(global) {
+  var SERVER_ENDPOINT = 'http://loggio.herokuapp.com/endpoint';
+  //var SERVER_ENDPOINT = 'http://' + location.hostname + ':3000' + '/endpoint';
+
+  var polling = false,
+      pollingInterval = 1500,
+      intervalID,
+      lastID = 0,
+      deviceID = 0,
+      deviceGroupID = 0,
+      registered = false;
 
 var nativeXHR = XMLHttpRequest;
 
-var XMLHttpRequest = function XMLHttpRequest() {
+var XMLHttpRequestWrapper = function XMLHttpRequest() {
   this.xhr = new nativeXHR();
 
   var self = this;
@@ -32,41 +42,42 @@ var XMLHttpRequest = function XMLHttpRequest() {
   });
 };
 
-XMLHttpRequest.prototype = Object.create(nativeXHR.prototype);
+XMLHttpRequestWrapper.prototype = Object.create(nativeXHR.prototype);
 
-XMLHttpRequest.prototype.addEventListener = function() {
+XMLHttpRequestWrapper.prototype.addEventListener = function() {
   return this.xhr.addEventListener.apply(this.xhr, arguments);
 }
 
-XMLHttpRequest.prototype.abort = function() {
+XMLHttpRequestWrapper.prototype.abort = function() {
   return this.xhr.abort.apply(this.xhr, arguments);
 };
 
-XMLHttpRequest.prototype.getAllResponseHeaders = function() {
+XMLHttpRequestWrapper.prototype.getAllResponseHeaders = function() {
   return this.xhr.getAllResponseHeaders.apply(this.xhr, arguments);
 };
 
-XMLHttpRequest.prototype.getResponseHeader = function() {
+XMLHttpRequestWrapper.prototype.getResponseHeader = function() {
   return this.xhr.getResponseHeader.apply(this.xhr, arguments);
 };
 
-XMLHttpRequest.prototype.open = function() {
+XMLHttpRequestWrapper.prototype.open = function() {
   return this.xhr.open.apply(this.xhr, arguments);
 };
 
-XMLHttpRequest.prototype.overrideMimeType = function() {
+XMLHttpRequestWrapper.prototype.overrideMimeType = function() {
   return this.xhr.overrideMimeType.apply(this.xhr, arguments);
 };
 
-XMLHttpRequest.prototype.send = function() {
+XMLHttpRequestWrapper.prototype.send = function() {
   return this.xhr.send.apply(this.xhr, arguments);
 };
 
-XMLHttpRequest.prototype.setRequestHeader = function() {
+XMLHttpRequestWrapper.prototype.setRequestHeader = function() {
   return this.xhr.setRequestHeader.apply(this.xhr, arguments);
 };
 
-global.XMLHttpRequest = XMLHttpRequest;
+global.XMLHttpRequest = XMLHttpRequestWrapper;
+
 var nativeAddEventListener = EventTarget.prototype.addEventListener,
     nativeRemoveEventListener = EventTarget.prototype.removeEventListener;
 
@@ -110,17 +121,6 @@ EventTarget.prototype.removeEventListener = function() {
 
   nativeRemoveEventListener.apply(this, arguments);
 }
-//var SERVER_ENDPOINT = 'http://loggio.herokuapp.com/endpoint';
-var SERVER_ENDPOINT = 'http://' + location.hostname + ':3000' + '/endpoint';
-
-var polling = false,
-    pollingInterval = 1500,
-    intervalID,
-    lastID = 0,
-    deviceID = 0,
-    deviceGroupID = 0,
-    registered = false;
-
 function extend(destination, origin) {
   for (var name in origin) {
     destination[name] = origin[name];
@@ -748,5 +748,5 @@ Logg.trackLocation = function() {
   });
 };
 
-global.Logg = global.logg = global.scope = Logg;
+global.Logg = global.logg = global.Scope = Logg;
 })(window);
