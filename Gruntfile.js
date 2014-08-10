@@ -12,9 +12,10 @@ module.exports = function(grunt) {
       options: {
         banner: '<%= meta.banner %>'
       },
-      dist: {
+      dev: {
         src: [
           'lib/begin.js',
+          'lib/dev.js',
           'lib/xhr.js',
           'lib/native.js',
           'lib/helpers.js',
@@ -24,13 +25,29 @@ module.exports = function(grunt) {
           'lib/utils.js',
           'lib/end.js'
         ],
-        dest: 'inspector.js'
+        dest: 'inspector_development.js'
+      },
+      prod: {
+        src: [
+          'lib/begin.js',
+          'lib/prod.js',
+          'lib/xhr.js',
+          'lib/native.js',
+          'lib/helpers.js',
+          'lib/async.js',
+          'lib/core.js',
+          'lib/ui.js',
+          'lib/utils.js',
+          'lib/end.js'
+        ],
+        dest: 'inspector_production.js'
       }
     },
     uglify: {
       all: {
         files: {
-          'inspector.min.js': [ 'inspector.js' ]
+          'inspector_development.min.js': [ 'inspector_development.js' ],
+          'inspector_production.min.js': [ 'inspector_production.js' ]
         },
         options: {
           preserveComments: false,
@@ -42,8 +59,16 @@ module.exports = function(grunt) {
     },
     copy: {
       main: {
-        src: 'inspector.min.js',
-        dest: '../logg.io/public/inspector.js'
+        files: [
+          {
+            src: 'inspector_development.min.js',
+            dest: '../logg.io/public/inspector_development.js'
+          },
+          {
+            src: 'inspector_production.min.js',
+            dest: '../logg.io/public/inspector_production.js'
+          }
+        ]
       }
     }
   });
