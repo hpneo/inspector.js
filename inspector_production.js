@@ -70,13 +70,22 @@ XMLHttpRequestWrapper.prototype.setRequestHeader = function() {
 
 global.XMLHttpRequest = XMLHttpRequestWrapper;
 
-var nativeAddEventListener = EventTarget.prototype.addEventListener,
-    nativeRemoveEventListener = EventTarget.prototype.removeEventListener;
+var EventPrototype;
+
+if ('EventTarget' in global) {
+  EventPrototype = EventTarget.prototype;
+}
+else {
+  EventPrototype = Node.prototype;
+}
+
+var nativeAddEventListener = EventPrototype.addEventListener,
+    nativeRemoveEventListener = EventPrototype.removeEventListener;
 
 var globalEvents = {},
     elementsWithEvents = [];
 
-EventTarget.prototype.addEventListener = function() {
+EventPrototype.addEventListener = function() {
   if (elementsWithEvents.indexOf(this) === -1) {
     elementsWithEvents.push(this);
   }
@@ -94,7 +103,7 @@ EventTarget.prototype.addEventListener = function() {
   nativeAddEventListener.apply(this, arguments);
 }
 
-EventTarget.prototype.removeEventListener = function() {
+EventPrototype.removeEventListener = function() {
   var index = elementsWithEvents.indexOf(this);
 
   if (index > -1) {
