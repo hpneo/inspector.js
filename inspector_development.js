@@ -237,18 +237,32 @@ function elementToSelector(element) {
 }
 
 function objectKeys(object) {
-  if (Object.keys) {
-    return Object.keys(object);
-  }
-  else {
-    var keys = [];
+  var keys;
+
+  if (true) { //object instanceof HTMLElement
+    keys = [];
 
     for (var i in object) {
       keys.push(i);
     }
-
-    return keys;
   }
+  else {
+    if (Object.getOwnPropertyNames) {
+      keys = Object.getOwnPropertyNames(object);
+    }
+    else if (Object.keys) {
+      keys = Object.keys(object);
+    }
+    else {
+      keys = [];
+
+      for (var i in object) {
+        keys.push(i);
+      }
+    }
+  }
+
+  return keys;
 }
 
 function preJSON(object) {
@@ -318,7 +332,8 @@ function preJSON(object) {
   }
   else if (
     (object instanceof Array) ||
-    (typeof object.length === 'number')
+    (object instanceof NodeList) ||
+    (object instanceof HTMLCollection)
   ) {
     linearObject = [];
 
@@ -386,7 +401,7 @@ var Logg = {
     }
     else {
       this.settings['name'] = baseIdentifier.replace(/-/g, ' ');
-      this.settings['name'] = this.settings['name'].toUpperCase() + this.settings['name'].substring(1);
+      this.settings['name'] = this.settings['name'][0].toUpperCase() + this.settings['name'].substring(1);
     }
 
     if (this.settings['name'].indexOf('(' + navigator.platform + ')') === -1) {
@@ -407,6 +422,8 @@ var Logg = {
       this.settings['group'] = baseIdentifier.replace('-' + identifierFromUserAgent(), '');
     }
 
+    this.settings['client_key'] = options['client_key'];
+
     var data = {
       'identifier': this.settings['identifier'],
       'navigator': this.settings['navigator'],
@@ -423,18 +440,26 @@ var Logg = {
 
         var response = JSON.parse(response);
 
-        if (response) {
-          lastID = response.id;
-          deviceID = response.device_id;
+        if (response && ('error' in response)) {
+          alert(response['error']);
         }
+        else {
+          if (response['id']) {
+            lastID = response['id'];
+          }
 
-        if (response.device_group_id) {
-          deviceGroupID = response.device_group_id;
-        }
+          if (response) {
+            deviceID = response['device_id'];
+          }
 
-        if (deviceID) {
-          Logg.init();
-          Logg.trackLocation();
+          if (response['device_group_id']) {
+            deviceGroupID = response['device_group_id'];
+          }
+
+          if (deviceID) {
+            Logg.init();
+            Logg.trackLocation();
+          }
         }
       }
     });
@@ -501,7 +526,7 @@ for (var i in consoleMethods) {
 
       var data = {
         'message_type': method_name,
-        'content': JSON.stringify(content)
+        'content': JSON.stringify(preJSON(content))
       };
 
       Async.post({
