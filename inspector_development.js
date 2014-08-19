@@ -265,6 +265,17 @@ function objectKeys(object) {
   return keys;
 }
 
+function matchesSelector(element, selector) {
+  var matchesSelectorFn = element.webkitMatchesSelector || element.mozMatchesSelector || element.msMatchesSelector || element.oMatchesSelector || element.matchesSelector || element.matches;
+
+  if (matchesSelectorFn === undefined) {
+    return false;
+  }
+  else {
+    return matchesSelectorFn.call(element, selector);
+  }
+}
+
 function preJSON(object) {
   var linearObject;
 
@@ -536,49 +547,45 @@ for (var i in consoleMethods) {
     };
   })(method);
 }
-Logg.boxModel = function(selector) {
-  if (!('querySelector' in global.document) && !('getComputedStyle' in global)) {
-    return false;
-  }
+Logg.initHighlight = function() {
+  var marginContainer = document.createElement('div'),
+      borderContainer = document.createElement('div'),
+      paddingContainer = document.createElement('div'),
+      contentContainer = document.createElement('div');
 
-  var element = global.document.querySelector(selector),
-      style = global.getComputedStyle(element);
+  marginContainer.id = 'margin_container';
+  borderContainer.id = 'border_container';
+  paddingContainer.id = 'padding_container';
+  contentContainer.id = 'content_container';
 
-  var content = {};
+  marginContainer.style.position = 'absolute';
+  borderContainer.style.position = 'absolute';
+  paddingContainer.style.position = 'absolute';
+  contentContainer.style.position = 'absolute';
 
-  content[selector] = {
-    'contentWidth': parseInt(element.clientWidth) - parseInt(style.paddingLeft) - parseInt(style.paddingRight) - parseInt(style.borderLeftWidth) - parseInt(style.borderRightWidth),
-    'contentHeight': parseInt(element.clientHeight) - parseInt(style.paddingTop) - parseInt(style.paddingBottom) - parseInt(style.borderTopWidth) - parseInt(style.borderBottomWidth),
-    'borderTopWidth': parseInt(style.borderTopWidth),
-    'borderBottomWidth': parseInt(style.borderBottomWidth),
-    'borderLeftWidth': parseInt(style.borderLeftWidth),
-    'borderRightWidth': parseInt(style.borderRightWidth),
-    'marginTop': parseInt(style.marginTop),
-    'marginBottom': parseInt(style.marginBottom),
-    'marginLeft': parseInt(style.marginLeft),
-    'marginRight': parseInt(style.marginRight),
-    'paddingTop': parseInt(style.paddingTop),
-    'paddingBottom': parseInt(style.paddingBottom),
-    'paddingLeft': parseInt(style.paddingLeft),
-    'paddingRight': parseInt(style.paddingRight),
-    'clientWidth': element.clientWidth,
-    'clientHeight': element.clientHeight,
-    'offsetWidth': element.offsetWidth,
-    'offsetHeight': element.offsetHeight,
-    'scrollWidth': element.scrollWidth,
-    'scrollHeight': element.scrollHeight
-  };
+  marginContainer.style.backgroundColor = 'rgb(211, 84, 0)';
+  borderContainer.style.backgroundColor = 'rgb(243, 156, 18)';
+  paddingContainer.style.backgroundColor = 'rgb(39, 174, 96)';
+  contentContainer.style.backgroundColor = 'rgb(41, 128, 185)';
 
-  var data = {
-    'message_type': 'box_model',
-    'content': JSON.stringify(content),
-    'in_reply_to': lastID
-  };
+  marginContainer.style.opacity = '0.35';
 
-  Async.post({
-    url: SERVER_ENDPOINT + '/messages',
-    data: data
-  });
+  paddingContainer.appendChild(contentContainer);
+  borderContainer.appendChild(paddingContainer);
+  marginContainer.appendChild(borderContainer);
+
+  marginContainer.style.width = '0px';
+  marginContainer.style.height = '0px';
+  marginContainer.style.zIndex = 616;
+  marginContainer.style.overflow = 'hidden';
+
+  global.document.body.appendChild(marginContainer);
+};
+
+Logg.resetHighlight = function() {
+  var highlight = global.document.getElementById('margin_container');
+  highlight.style.width = '0px';
+  highlight.style.height = '0px';
 };
 
 Logg.highlightElement = function(element) {
@@ -642,45 +649,73 @@ Logg.highlightElement = function(element) {
   contentContainer.style.height = boxModel.contentHeight + 'px';
 };
 
-Logg.initHighlight = function() {
-  var marginContainer = document.createElement('div'),
-      borderContainer = document.createElement('div'),
-      paddingContainer = document.createElement('div'),
-      contentContainer = document.createElement('div');
+Logg.getDOM = function() {
+  var node = document.doctype,
+      doctypeHTML = '';
 
-  marginContainer.id = 'margin_container';
-  borderContainer.id = 'border_container';
-  paddingContainer.id = 'padding_container';
-  contentContainer.id = 'content_container';
+  if (node) {
+    var doctypeHTML = "<!DOCTYPE "
+                       + node.name
+                       + (node.publicId ? ' PUBLIC "' + node.publicId + '"' : '')
+                       + (!node.publicId && node.systemId ? ' SYSTEM' : '') 
+                       + (node.systemId ? ' "' + node.systemId + '"' : '')
+                       + '>';
+  }
 
-  marginContainer.style.position = 'absolute';
-  borderContainer.style.position = 'absolute';
-  paddingContainer.style.position = 'absolute';
-  contentContainer.style.position = 'absolute';
+  var data = {
+    'message_type': 'dom',
+    'content': doctypeHTML + document.documentElement.outerHTML,
+    'in_reply_to': lastID
+  };
 
-  marginContainer.style.backgroundColor = 'rgb(211, 84, 0)';
-  borderContainer.style.backgroundColor = 'rgb(243, 156, 18)';
-  paddingContainer.style.backgroundColor = 'rgb(39, 174, 96)';
-  contentContainer.style.backgroundColor = 'rgb(41, 128, 185)';
-
-  marginContainer.style.opacity = '0.35';
-
-  paddingContainer.appendChild(contentContainer);
-  borderContainer.appendChild(paddingContainer);
-  marginContainer.appendChild(borderContainer);
-
-  marginContainer.style.width = '0px';
-  marginContainer.style.height = '0px';
-  marginContainer.style.zIndex = 616;
-  marginContainer.style.overflow = 'hidden';
-
-  global.document.body.appendChild(marginContainer);
+  Async.post({
+    url: SERVER_ENDPOINT + '/messages',
+    data: data
+  });
 };
+Logg.boxModel = function(selector) {
+  if (!('querySelector' in global.document) && !('getComputedStyle' in global)) {
+    return false;
+  }
 
-Logg.resetHighlight = function() {
-  var highlight = global.document.getElementById('margin_container');
-  highlight.style.width = '0px';
-  highlight.style.height = '0px';
+  var element = global.document.querySelector(selector),
+      style = global.getComputedStyle(element);
+
+  var content = {};
+
+  content[selector] = {
+    'contentWidth': parseInt(element.clientWidth) - parseInt(style.paddingLeft) - parseInt(style.paddingRight) - parseInt(style.borderLeftWidth) - parseInt(style.borderRightWidth),
+    'contentHeight': parseInt(element.clientHeight) - parseInt(style.paddingTop) - parseInt(style.paddingBottom) - parseInt(style.borderTopWidth) - parseInt(style.borderBottomWidth),
+    'borderTopWidth': parseInt(style.borderTopWidth),
+    'borderBottomWidth': parseInt(style.borderBottomWidth),
+    'borderLeftWidth': parseInt(style.borderLeftWidth),
+    'borderRightWidth': parseInt(style.borderRightWidth),
+    'marginTop': parseInt(style.marginTop),
+    'marginBottom': parseInt(style.marginBottom),
+    'marginLeft': parseInt(style.marginLeft),
+    'marginRight': parseInt(style.marginRight),
+    'paddingTop': parseInt(style.paddingTop),
+    'paddingBottom': parseInt(style.paddingBottom),
+    'paddingLeft': parseInt(style.paddingLeft),
+    'paddingRight': parseInt(style.paddingRight),
+    'clientWidth': element.clientWidth,
+    'clientHeight': element.clientHeight,
+    'offsetWidth': element.offsetWidth,
+    'offsetHeight': element.offsetHeight,
+    'scrollWidth': element.scrollWidth,
+    'scrollHeight': element.scrollHeight
+  };
+
+  var data = {
+    'message_type': 'box_model',
+    'content': JSON.stringify(content),
+    'in_reply_to': lastID
+  };
+
+  Async.post({
+    url: SERVER_ENDPOINT + '/messages',
+    data: data
+  });
 };
 
 Logg.getComputedStyle = function(selector) {
@@ -732,31 +767,30 @@ Logg.getElementProperties = function(selector) {
     url: SERVER_ENDPOINT + '/messages',
     data: data
   });
-}
+};
 
-Logg.getDOM = function() {
-  var node = document.doctype,
-      doctypeHTML = '';
-
-  if (node) {
-    var doctypeHTML = "<!DOCTYPE "
-                       + node.name
-                       + (node.publicId ? ' PUBLIC "' + node.publicId + '"' : '')
-                       + (!node.publicId && node.systemId ? ' SYSTEM' : '') 
-                       + (node.systemId ? ' "' + node.systemId + '"' : '')
-                       + '>';
+Logg.getElementStyles = function(selector) {
+  if (!('querySelector' in global.document) && !('getComputedStyle' in global)) {
+    return false;
   }
 
-  var data = {
-    'message_type': 'dom',
-    'content': doctypeHTML + document.documentElement.outerHTML,
-    'in_reply_to': lastID
-  };
+  var element = global.document.querySelector(selector),
+      stylesheets = document.styleSheets,
+      elementStyles = {};
 
-  Async.post({
-    url: SERVER_ENDPOINT + '/messages',
-    data: data
-  });
+  for (var i = 0; i < stylesheets.length; i++) {
+    var cssRules = stylesheets[i].cssRules || stylesheets[i].rules || [];
+
+    for (var j = 0; j < cssRules.length; j++) {
+      var selectorText = cssRules[j].selectorText;
+      if (matchesSelector(element, selectorText)) {
+        elementStyles[selectorText] = elementStyles[selectorText] || [];
+        elementStyles[selectorText].push(cssRules[j].style);
+      }
+    }
+  }
+
+  return elementStyles;
 };
 Logg.getNavigator = function() {
   var data = {

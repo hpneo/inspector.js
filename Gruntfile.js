@@ -22,6 +22,7 @@ module.exports = function(grunt) {
           'lib/async.js',
           'lib/core.js',
           'lib/ui.js',
+          'lib/inspector.js',
           'lib/utils.js',
           'lib/end.js'
         ],
@@ -37,6 +38,7 @@ module.exports = function(grunt) {
           'lib/async.js',
           'lib/core.js',
           'lib/ui.js',
+          'lib/inspector.js',
           'lib/utils.js',
           'lib/end.js'
         ],
