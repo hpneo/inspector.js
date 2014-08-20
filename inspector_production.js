@@ -673,7 +673,7 @@ Logg.getDOM = function() {
     data: data
   });
 };
-Logg.boxModel = function(selector) {
+Logg.boxModel = function(selector, send) {
   if (!('querySelector' in global.document) && !('getComputedStyle' in global)) {
     return false;
   }
@@ -712,13 +712,18 @@ Logg.boxModel = function(selector) {
     'in_reply_to': lastID
   };
 
-  Async.post({
-    url: SERVER_ENDPOINT + '/messages',
-    data: data
-  });
+  if (send) {
+    Async.post({
+      url: SERVER_ENDPOINT + '/messages',
+      data: data
+    });
+  }
+  else {
+    return data;
+  }
 };
 
-Logg.getComputedStyle = function(selector) {
+Logg.getComputedStyle = function(selector, send) {
   if (!('querySelector' in global.document) && !('getComputedStyle' in global)) {
     return false;
   }
@@ -744,13 +749,18 @@ Logg.getComputedStyle = function(selector) {
     'in_reply_to': lastID
   };
 
-  Async.post({
-    url: SERVER_ENDPOINT + '/messages',
-    data: data
-  });
+  if (send) {
+    Async.post({
+      url: SERVER_ENDPOINT + '/messages',
+      data: data
+    });
+  }
+  else {
+    return data;
+  }
 };
 
-Logg.getElementProperties = function(selector) {
+Logg.getElementProperties = function(selector, send) {
   if (!('querySelector' in global.document) && !('getComputedStyle' in global)) {
     return false;
   }
@@ -763,10 +773,15 @@ Logg.getElementProperties = function(selector) {
     'in_reply_to': lastID
   };
 
-  Async.post({
-    url: SERVER_ENDPOINT + '/messages',
-    data: data
-  });
+  if (send) {
+    Async.post({
+      url: SERVER_ENDPOINT + '/messages',
+      data: data
+    });
+  }
+  else {
+    return data;
+  }
 };
 
 Logg.getElementStyles = function(selector) {
@@ -791,6 +806,29 @@ Logg.getElementStyles = function(selector) {
   }
 
   return elementStyles;
+};
+
+Logg.inspect = function(selector) {
+  var boxModel = Logg.boxModel(selector, false),
+      computedStyle = Logg.getComputedStyle(selector, false),
+      properties = Logg.getElementProperties(selector, false),
+      styles = Logg.getElementStyles(selector, false);
+
+  var data = {
+    'message_type': 'element_inspect',
+    'content': JSON.stringify({
+      boxModel: boxModel,
+      computedStyle: computedStyle,
+      properties: properties,
+      styles: styles
+    }),
+    'in_reply_to': lastID
+  };
+
+  Async.post({
+    url: SERVER_ENDPOINT + '/messages',
+    data: data
+  });
 };
 Logg.getNavigator = function() {
   var data = {
