@@ -276,6 +276,17 @@ function matchesSelector(element, selector) {
   }
 }
 
+function CSSStyleDeclarationToObject(style) {
+  var cssObject = {};
+  var properties = [].slice.call(style, 0);
+
+  for (var i = 0; i < properties.length; i++) {
+    cssObject[properties[i]] = style.getPropertyValue(properties[i]);
+  }
+
+  return cssObject;
+}
+
 function preJSON(object) {
   var linearObject;
 
@@ -794,13 +805,19 @@ Logg.getElementStyles = function(selector) {
       elementStyles = {};
 
   for (var i = 0; i < stylesheets.length; i++) {
-    var cssRules = stylesheets[i].cssRules || stylesheets[i].rules || [];
+    var stylesheet = stylesheets[i],
+        href = stylesheet.href || 'not_available',
+        cssRules = stylesheet.cssRules || stylesheet.rules || [];
 
     for (var j = 0; j < cssRules.length; j++) {
       var selectorText = cssRules[j].selectorText;
       if (matchesSelector(element, selectorText)) {
         elementStyles[selectorText] = elementStyles[selectorText] || [];
-        elementStyles[selectorText].push(cssRules[j].style);
+
+        var elementStyle = {};
+        elementStyle[href] = CSSStyleDeclarationToObject(cssRules[j].style);
+
+        elementStyles[selectorText].push(elementStyle);
       }
     }
   }
