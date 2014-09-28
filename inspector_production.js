@@ -86,16 +86,19 @@ var globalEvents = {},
     elementsWithEvents = [];
 
 EventPrototype.addEventListener = function() {
-  if (elementsWithEvents.indexOf(this) === -1) {
-    elementsWithEvents.push(this);
-  }
-
   var index = elementsWithEvents.indexOf(this);
 
+  if (index === -1) {
+    elementsWithEvents.push(this);
+    index = elementsWithEvents.indexOf(this);
+  }
+
+  var eventName = arguments[0];
+
   globalEvents[index] = globalEvents[index] || {};
-  globalEvents[index][arguments[0]] = globalEvents[index][arguments[0]] || [];
+  globalEvents[index][eventName] = globalEvents[index][eventName] || [];
   
-  globalEvents[index][arguments[0]].push({
+  globalEvents[index][eventName].push({
     handler: arguments[1],
     useCapture: ((arguments[2] === undefined) ? false : arguments[2])
   })
@@ -744,13 +747,13 @@ Logg.getComputedStyle = function(selector, send) {
       computedStyles = global.getComputedStyle(element),
       properties = Array.prototype.slice.call(computedStyles, 0);
 
-  content[selector] = {};
+  content[selector] = CSSStyleDeclarationToObject(computedStyles);
 
-  for (var i = 0; i < properties.length; i++) {
+  /*for (var i = 0; i < properties.length; i++) {
     var property = properties[i];
     
     content[selector][property] = encodeURIComponent(computedStyles[property]);
-  }
+  }*/
 
   element = computedStyles = properties = null;
 
@@ -795,7 +798,7 @@ Logg.getElementProperties = function(selector, send) {
   }
 };
 
-Logg.getElementStyles = function(selector) {
+Logg.getElementStyles = function(selector, send) {
   if (!('querySelector' in global.document) && !('getComputedStyle' in global)) {
     return false;
   }
@@ -822,14 +825,66 @@ Logg.getElementStyles = function(selector) {
     }
   }
 
-  return elementStyles;
+  var data = {
+    'message_type': 'element_styles',
+    'content': JSON.stringify(preJSON(elementStyles)),
+    'in_reply_to': lastID
+  };
+
+  if (send) {
+    Async.post({
+      url: SERVER_ENDPOINT + '/messages',
+      data: data
+    });
+  }
+  else {
+    return data;
+  }
+};
+
+Logg.getElementEvents = function(selector, send) {
+  if (!('querySelector' in global.document) && !('getComputedStyle' in global)) {
+    return false;
+  }
+
+  var element, elementEvents = {};
+
+  if (selector === 'window') {
+    element = global;
+  }
+  else {
+    element = global.document.querySelector(selector);
+  }
+  
+  var elementEventsIndex = elementsWithEvents.indexOf(element);
+
+  if (elementEventsIndex > -1) {
+    elementEvents = globalEvents[elementEventsIndex];
+  }
+
+  var data = {
+    'message_type': 'element_events',
+    'content': JSON.stringify(preJSON(elementEvents)),
+    'in_reply_to': lastID
+  };
+
+  if (send) {
+    Async.post({
+      url: SERVER_ENDPOINT + '/messages',
+      data: data
+    });
+  }
+  else {
+    return data;
+  }
 };
 
 Logg.inspect = function(selector) {
   var boxModel = Logg.boxModel(selector, false),
       computedStyle = Logg.getComputedStyle(selector, false),
       properties = Logg.getElementProperties(selector, false),
-      styles = Logg.getElementStyles(selector, false);
+      styles = Logg.getElementStyles(selector, false),
+      events = Logg.getElementEvents(selector, false);
 
   var data = {
     'message_type': 'element_inspect',
@@ -837,7 +892,8 @@ Logg.inspect = function(selector) {
       boxModel: boxModel,
       computedStyle: computedStyle,
       properties: properties,
-      styles: styles
+      styles: styles,
+      events: events
     }),
     'in_reply_to': lastID
   };
