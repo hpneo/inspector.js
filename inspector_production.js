@@ -5,7 +5,7 @@
 */
 
 (function(global) {
-
+  "use strict";
 var SERVER_ENDPOINT = 'http://loggio.herokuapp.com/endpoint';
 
 var nativeXHR = XMLHttpRequest;
@@ -322,7 +322,10 @@ function preJSON(object) {
   else if (object instanceof Document) {
     linearObject = '#document';
   }
-  else if (object instanceof Window) {
+  else if (global.Window && object instanceof global.Window) {
+    linearObject = 'window';
+  }
+  else if (global.DOMWindow && object instanceof global.DOMWindow) {
     linearObject = 'window';
   }
   else if (object instanceof Comment) {
@@ -726,7 +729,7 @@ Logg.boxModel = function(selector, send) {
     'in_reply_to': lastID
   };
 
-  if (send) {
+  if (send === undefined || send === true) {
     Async.post({
       url: SERVER_ENDPOINT + '/messages',
       data: data
@@ -763,7 +766,7 @@ Logg.getComputedStyle = function(selector, send) {
     'in_reply_to': lastID
   };
 
-  if (send) {
+  if (send === undefined || send === true) {
     Async.post({
       url: SERVER_ENDPOINT + '/messages',
       data: data
@@ -787,7 +790,7 @@ Logg.getElementProperties = function(selector, send) {
     'in_reply_to': lastID
   };
 
-  if (send) {
+  if (send === undefined || send === true) {
     Async.post({
       url: SERVER_ENDPOINT + '/messages',
       data: data
@@ -831,7 +834,7 @@ Logg.getElementStyles = function(selector, send) {
     'in_reply_to': lastID
   };
 
-  if (send) {
+  if (send === undefined || send === true) {
     Async.post({
       url: SERVER_ENDPOINT + '/messages',
       data: data
@@ -868,7 +871,7 @@ Logg.getElementEvents = function(selector, send) {
     'in_reply_to': lastID
   };
 
-  if (send) {
+  if (send === undefined || send === true) {
     Async.post({
       url: SERVER_ENDPOINT + '/messages',
       data: data
