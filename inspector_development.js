@@ -8,22 +8,14 @@
   "use strict";
 var SERVER_ENDPOINT = 'http://' + location.hostname + ':3000' + '/endpoint';
 
-var nativeXHR = XMLHttpRequest;
+var nativeXHR = global.XMLHttpRequest;
 
-var XMLHttpRequestWrapper = function XMLHttpRequest() {
-  this.xhr = new nativeXHR();
+if (true) {
+  var XMLHttpRequestWrapper = function XMLHttpRequest() {
+    this.xhr = new nativeXHR();
 
-  var self = this;
+    var self = this;
 
-  self.readyState = self.xhr.readyState;
-  self.response = self.xhr.response;
-  self.responseText = self.xhr.responseText;
-  self.responseXML = self.xhr.responseXML;
-  self.responseType = self.xhr.responseType;
-  self.status = self.xhr.status;
-  self.statusText = self.xhr.statusText;
-
-  self.xhr.addEventListener('readystatechange', function() {
     self.readyState = self.xhr.readyState;
     self.response = self.xhr.response;
     self.responseText = self.xhr.responseText;
@@ -31,45 +23,174 @@ var XMLHttpRequestWrapper = function XMLHttpRequest() {
     self.responseType = self.xhr.responseType;
     self.status = self.xhr.status;
     self.statusText = self.xhr.statusText;
+    self._request_headers = {};
+    self._id = Date.now();
+
+    var c = 0;
+
+    self.xhr.addEventListener('readystatechange', function(e) {
+      var url = '',
+          response_headers = {};
+
+      try {
+        self.readyState = self.xhr.readyState;
+        self.response = self.xhr.response;
+        self.responseText = self.xhr.responseText;
+        self.responseXML = self.xhr.responseXML;
+        self.responseType = self.xhr.responseType;
+        self.status = self.xhr.status;
+        self.statusText = self.xhr.statusText;
+
+        url = self._url;
+        response_headers = self.xhr.getAllResponseHeaders();
+      }
+      catch(ex) {}
+
+      var data = {
+        id: (self._id + '_' + c),
+        readyState: self.readyState,
+        status: self.status,
+        statusText: self.statusText,
+        responseText: self.responseText,
+        responseType: self.responseType,
+        request_headers: self._request_headers,
+        response_headers: response_headers,
+        method: self._method,
+        mime_type: self._mime_type,
+        url: url,
+        at: Math.round(new Date().getTime() / 1000)
+      };
+
+      Async.post({
+        url: SERVER_ENDPOINT + '/messages',
+        data: {
+          'message_type': 'xhr',
+          'internal_id': self._id,
+          'content': JSON.stringify(preJSON(data))
+        }
+      });
+
+      c = c + 1;
+    });
+  };
+
+  XMLHttpRequestWrapper.prototype = Object.create(nativeXHR.prototype);
+
+  XMLHttpRequestWrapper.prototype.addEventListener = function() {
+    return this.xhr.addEventListener.apply(this.xhr, arguments);
+  }
+
+  XMLHttpRequestWrapper.prototype.abort = function() {
+    return this.xhr.abort.apply(this.xhr, arguments);
+  };
+
+  XMLHttpRequestWrapper.prototype.getAllResponseHeaders = function() {
+    return this.xhr.getAllResponseHeaders.apply(this.xhr, arguments);
+  };
+
+  XMLHttpRequestWrapper.prototype.getResponseHeader = function() {
+    return this.xhr.getResponseHeader.apply(this.xhr, arguments);
+  };
+
+  XMLHttpRequestWrapper.prototype.open = function() {
+    this._method = arguments[0];
+    this._url = arguments[1];
+
+    return this.xhr.open.apply(this.xhr, arguments);
+  };
+
+  XMLHttpRequestWrapper.prototype.overrideMimeType = function() {
+    this._mime_type = arguments[0];
+    return this.xhr.overrideMimeType.apply(this.xhr, arguments);
+  };
+
+  XMLHttpRequestWrapper.prototype.send = function() {
+    return this.xhr.send.apply(this.xhr, arguments);
+  };
+
+  XMLHttpRequestWrapper.prototype.setRequestHeader = function() {
+    this._request_headers = this._request_headers || {};
+    this._request_headers[arguments[0]] = arguments[1];
+
+    return this.setRequestHeader.apply(this.xhr, arguments);
+  };
+
+  function customXHROpen() {
+    this._method = arguments[0];
+    this._url = arguments[1];
+
+    console.log(nativeXHR.prototype.open);
+
+    return nativeXHR.prototype.open.apply(this, arguments);
+  }
+
+  function customXHRSetRequestHeader() {
+    this._request_headers = this._request_headers || {};
+    this._request_headers[arguments[0]] = arguments[1];
+
+    return nativeXHR.prototype.setRequestHeader.apply(this, arguments);
+  }
+
+  function customXHROverrideMimeType() {
+    this._mime_type = arguments[0];
+
+    return nativeXHR.prototype.overrideMimeType.apply(this, arguments);
+  };
+
+  global.XMLHttpRequest = XMLHttpRequestWrapper;
+
+  global.addEventListener('load', function() {
+    function customXHRFactory() {
+      var xhr = new nativeXHR(),
+          c = 0,
+          _id = Date.now();
+
+      xhr.open = customXHROpen;
+      xhr.setRequestHeader = customXHRSetRequestHeader;
+      xhr.overrideMimeType = customXHROverrideMimeType;
+
+      xhr.addEventListener('readystatechange', function(e) {
+        var data = {
+          id: (_id + '_' + c),
+          readyState: this.readyState,
+          status: this.status,
+          statusText: this.statusText,
+          responseText: this.responseText,
+          responseType: this.responseType,
+          request_headers: this._request_headers,
+          response_headers: this.getAllResponseHeaders(),
+          method: this._method,
+          at: Math.round(new Date().getTime() / 1000),
+          mime_type: this._mime_type,
+          url: this._url
+        };
+
+        Async.post({
+          url: SERVER_ENDPOINT + '/messages',
+          data: {
+            'message_type': 'xhr',
+            'internal_id': _id,
+            'content': JSON.stringify(preJSON(data))
+          }
+        });
+
+        c = c + 1;
+      });
+
+      return xhr;
+    }
+
+    if ('jQuery' in global) {
+      global.jQuery.support.cors = true;
+      global.jQuery.ajaxSettings.xhr = customXHRFactory;
+    }
+
+    if ('Zepto' in global) {
+      global.Zepto.support.cors = true;
+      global.Zepto.ajaxSettings.xhr = customXHRFactory;
+    }
   });
-};
-
-XMLHttpRequestWrapper.prototype = Object.create(nativeXHR.prototype);
-
-XMLHttpRequestWrapper.prototype.addEventListener = function() {
-  return this.xhr.addEventListener.apply(this.xhr, arguments);
 }
-
-XMLHttpRequestWrapper.prototype.abort = function() {
-  return this.xhr.abort.apply(this.xhr, arguments);
-};
-
-XMLHttpRequestWrapper.prototype.getAllResponseHeaders = function() {
-  return this.xhr.getAllResponseHeaders.apply(this.xhr, arguments);
-};
-
-XMLHttpRequestWrapper.prototype.getResponseHeader = function() {
-  return this.xhr.getResponseHeader.apply(this.xhr, arguments);
-};
-
-XMLHttpRequestWrapper.prototype.open = function() {
-  return this.xhr.open.apply(this.xhr, arguments);
-};
-
-XMLHttpRequestWrapper.prototype.overrideMimeType = function() {
-  return this.xhr.overrideMimeType.apply(this.xhr, arguments);
-};
-
-XMLHttpRequestWrapper.prototype.send = function() {
-  return this.xhr.send.apply(this.xhr, arguments);
-};
-
-XMLHttpRequestWrapper.prototype.setRequestHeader = function() {
-  return this.xhr.setRequestHeader.apply(this.xhr, arguments);
-};
-
-global.XMLHttpRequest = XMLHttpRequestWrapper;
-
 var EventPrototype;
 
 if ('EventTarget' in global) {
@@ -85,45 +206,47 @@ var nativeAddEventListener = EventPrototype.addEventListener,
 var globalEvents = {},
     elementsWithEvents = [];
 
-EventPrototype.addEventListener = function() {
-  var index = elementsWithEvents.indexOf(this);
+if (true) {
+  EventPrototype.addEventListener = function() {
+    var index = elementsWithEvents.indexOf(this);
 
-  if (index === -1) {
-    elementsWithEvents.push(this);
-    index = elementsWithEvents.indexOf(this);
+    if (index === -1) {
+      elementsWithEvents.push(this);
+      index = elementsWithEvents.indexOf(this);
+    }
+
+    var eventName = arguments[0];
+
+    globalEvents[index] = globalEvents[index] || {};
+    globalEvents[index][eventName] = globalEvents[index][eventName] || [];
+    
+    globalEvents[index][eventName].push({
+      handler: arguments[1],
+      useCapture: ((arguments[2] === undefined) ? false : arguments[2])
+    })
+
+    nativeAddEventListener.apply(this, arguments);
   }
 
-  var eventName = arguments[0];
+  EventPrototype.removeEventListener = function() {
+    var index = elementsWithEvents.indexOf(this);
 
-  globalEvents[index] = globalEvents[index] || {};
-  globalEvents[index][eventName] = globalEvents[index][eventName] || [];
-  
-  globalEvents[index][eventName].push({
-    handler: arguments[1],
-    useCapture: ((arguments[2] === undefined) ? false : arguments[2])
-  })
+    if (index > -1) {
+      globalEvents[index] = globalEvents[index] || {};
+      globalEvents[index][arguments[0]] = globalEvents[index][arguments[0]] || [];
 
-  nativeAddEventListener.apply(this, arguments);
-}
+      for (var i = 0; i < globalEvents[index][arguments[0]].length; i++) {
+        var registeredEvents = globalEvents[index][arguments[0]][i];
 
-EventPrototype.removeEventListener = function() {
-  var index = elementsWithEvents.indexOf(this);
-
-  if (index > -1) {
-    globalEvents[index] = globalEvents[index] || {};
-    globalEvents[index][arguments[0]] = globalEvents[index][arguments[0]] || [];
-
-    for (var i = 0; i < globalEvents[index][arguments[0]].length; i++) {
-      var registeredEvents = globalEvents[index][arguments[0]][i];
-
-      if (registeredEvents.handler === arguments[1]) {
-        globalEvents[index][arguments[0]].splice(i, 1);
-        break;
+        if (registeredEvents.handler === arguments[1]) {
+          globalEvents[index][arguments[0]].splice(i, 1);
+          break;
+        }
       }
     }
-  }
 
-  nativeRemoveEventListener.apply(this, arguments);
+    nativeRemoveEventListener.apply(this, arguments);
+  }
 }
 var polling = false,
     pollingInterval = 1500,
@@ -131,7 +254,8 @@ var polling = false,
     lastID = 0,
     deviceID = 0,
     deviceGroupID = 0,
-    registered = false;
+    registered = false,
+    alertOnError = false;
 
 function extend(destination, origin) {
   for (var name in origin) {
@@ -203,8 +327,21 @@ function getInstructions(data, interval) {
         if (response && response.id) {
           lastID = response.id;
 
-          var func = new Function(response.code);
-          func.call(global);
+          try {
+            var func = new Function('try {' + response.code + '}catch(e){ Logg.error({message: e.message, stack: e.stack}); }');
+            func.call(global);
+          }
+          catch(e) {
+            Logg.error({
+              name: e.name,
+              message: e.message,
+              stack: e.stack
+            });
+
+            if (alertOnError) {
+              alert('Name: ' + e.name + '\nMessage: ' + e.message + '\nStack:' + e.stack);
+            }
+          }
         }
 
         getInstructions(data, interval);
@@ -387,26 +524,78 @@ function preJSON(object) {
 
   return linearObject;
 };
+
+function filterList(list, callback) {
+  var filtered = [];
+
+  for (var i = 0; i < list.length; i++) {
+    var item = list[i];
+
+    if (callback(item)) {
+      filtered.push(item);
+    }
+  }
+
+  return filtered;
+}
+
+function mapList(list, callback) {
+  var mapped = [];
+
+  for (var i = 0; i < list.length; i++) {
+    var item = list[i];
+
+    mapped.push(callback(item));
+  }
+
+  return mapped;
+}
+
+function trimString(string) {
+  var trim = /^[\s\uFEFF\xA0]+|[\s\uFEFF\xA0]+$/g;
+  return string.replace(trim, "");
+}
 var Async = {
   request: function(request_type, options) {
-    options = options || {};
-    options.data = options.data || {};
-    options.data.device_id = deviceID;
+    try {
+      options = options || {};
+      options.data = options.data || {};
+      options.data.device_id = deviceID;
 
-    var xhr = new nativeXHR();
-    xhr.open(request_type, options.url, true);
+      var xhr = new nativeXHR();
+      xhr.open(request_type, options.url, true);
 
-    var data = serializeData(xhr, options.data);
+      xhr.onerror = function(e) {
+        if (this.readyState === 4 && options.onload) {
+          if (!xhr.responseText || xhr.responseText === '') {
+            xhr.responseText = {};
+          }
 
-    xhr.onload = function() {
-      if (this.readyState === 4 && options.onload) {
-        options.onload.call(global, xhr.responseText);
+          options.onload.call(global, xhr.responseText);
+        }
+        
+        xhr = null;
+      };
+
+      xhr.onload = function() {
+        if (this.readyState === 4 && options.onload) {
+          options.onload.call(global, xhr.responseText);
+        }
+        
+        xhr = null;
+      };
+
+      if (request_type === 'POST') {
+        var data = serializeData(xhr, options.data);
+        xhr.send(data);
       }
-      
-      xhr = null;
-    };
-
-    xhr.send(data);
+      else {
+        xhr.send();
+      }
+    }
+    catch(e) {
+      alert(JSON.stringify(e));
+    }
   },
   get: function(options) {
     Async.request('GET', options);
@@ -423,6 +612,9 @@ var Logg = {
     //this.settings = extend(this.settings, options);
 
     var baseIdentifier = options['identifier'];
+    if (options['alertOnError'] === true || options['alertOnError'] === false) {
+      alertOnError = options['alertOnError'];
+    }
 
     if (options['name']) {
       this.settings['name'] = options['name'];
@@ -493,7 +685,18 @@ var Logg = {
     });
 
     mapDOM(document.documentElement);
-    Logg.initHighlight();
+    window.onload = Logg.initHighlight;
+
+    if ('jQuery' in global && XMLHttpRequestWrapper) {
+      global.jQuery.ajaxSettings.xhr = function() {
+        try {
+          return new XMLHttpRequestWrapper();
+        }
+        catch(e) {
+          
+        }
+      };
+    }
   },
   init: function() {
     if (Logg.log) {
@@ -540,6 +743,10 @@ global.onerror = function(message, script, line, column) {
     data: data
   });
 
+  if (alertOnError) {
+    alert('Message: ' + message + '\nScript: ' + script + ':' + line);
+  }
+
   return true;
 };
 
@@ -564,6 +771,20 @@ for (var i in consoleMethods) {
     };
   })(method);
 }
+
+Logg.trace = function(func) {
+  try {
+    var func = new Function('try { return ' + func + '}catch(e){ Logg.error({message: e.message, stack: e.stack}); }');
+    func.call(global).apply(global, [].slice.call(arguments, 1));
+  }
+  catch(e) {
+    Logg.error({
+      name: e.name,
+      message: e.message,
+      stack: e.stack
+    })
+  }
+};
 Logg.initHighlight = function() {
   var marginContainer = document.createElement('div'),
       borderContainer = document.createElement('div'),
@@ -593,7 +814,7 @@ Logg.initHighlight = function() {
 
   marginContainer.style.width = '0px';
   marginContainer.style.height = '0px';
-  marginContainer.style.zIndex = 616;
+  marginContainer.style.zIndex = 9999;
   marginContainer.style.overflow = 'hidden';
 
   global.document.body.appendChild(marginContainer);
@@ -689,6 +910,58 @@ Logg.getDOM = function() {
     url: SERVER_ENDPOINT + '/messages',
     data: data
   });
+};
+
+Logg.getMediaQueries = function(send) {
+  var availableStyleSheets = filterList(document.styleSheets, function(item) { return item.cssRules || item.rules }),
+      styleSheetsWithMediaQueries = {},
+      matchMediaSupport = !!global.matchMedia;
+
+  if (matchMediaSupport) {
+    for (var i = 0; i < availableStyleSheets.length; i++) {
+      var styleSheet = availableStyleSheets[i];
+
+      var name = styleSheet.href,
+          rules = styleSheet.cssRules || styleSheet.rules || [];;
+
+      if (styleSheet.ownerNode.tagName === 'STYLE') {
+        name = 'style_' + styleSheet.ownerNode.getAttribute('data-loggid');
+      }
+
+      var mediaRules = filterList(rules, function(item) { return item instanceof CSSMediaRule; }),
+          uniqueMediaRules = [];
+
+      mediaRules = mapList(mediaRules, function(item) { return item.media.mediaText; });
+
+      for (var j = 0; j < mediaRules.length; j++) {
+        var mediaRule = mediaRules[j];
+
+        if (uniqueMediaRules.indexOf(mediaRule) === -1) {
+          if (global.matchMedia(mediaRule).matches) {
+            uniqueMediaRules.push(mediaRule);
+          }
+        }
+      }
+
+      if (uniqueMediaRules.length > 0) {
+        styleSheetsWithMediaQueries[name] = uniqueMediaRules;
+      }
+    }
+  }
+
+  if (send === undefined || send === true) {
+    Async.post({
+      url: SERVER_ENDPOINT + '/messages',
+      data: {
+        'message_type': 'media_queries',
+        'content': JSON.stringify(preJSON(styleSheetsWithMediaQueries)),
+        'in_reply_to': lastID
+      }
+    });
+  }
+  else {
+    return styleSheetsWithMediaQueries;
+  }
 };
 Logg.boxModel = function(selector, send) {
   if (!('querySelector' in global.document) && !('getComputedStyle' in global)) {
@@ -802,7 +1075,7 @@ Logg.getElementProperties = function(selector, send) {
 };
 
 Logg.getElementStyles = function(selector, send) {
-  if (!('querySelector' in global.document) && !('getComputedStyle' in global)) {
+  if (!('querySelector' in global.document)) {
     return false;
   }
 
@@ -811,9 +1084,9 @@ Logg.getElementStyles = function(selector, send) {
       elementStyles = {};
 
   for (var i = 0; i < stylesheets.length; i++) {
-    var stylesheet = stylesheets[i],
-        href = stylesheet.href || 'not_available',
-        cssRules = stylesheet.cssRules || stylesheet.rules || [];
+    var styleSheet = stylesheets[i],
+        href = styleSheet.href || 'stylesheet_' + styleSheet.ownerNode.getAttribute('data-loggid'),
+        cssRules = styleSheet.cssRules || styleSheet.rules || [];
 
     for (var j = 0; j < cssRules.length; j++) {
       var selectorText = cssRules[j].selectorText;
@@ -845,8 +1118,10 @@ Logg.getElementStyles = function(selector, send) {
   }
 };
 
+Logg.getMatchedCSSRules = Logg.getElementStyles;
+
 Logg.getElementEvents = function(selector, send) {
-  if (!('querySelector' in global.document) && !('getComputedStyle' in global)) {
+  if (!('querySelector' in global.document)) {
     return false;
   }
 
@@ -928,6 +1203,145 @@ Logg.trackLocation = function() {
     url: SERVER_ENDPOINT + '/messages',
     data: data
   });
+};
+
+Logg.getCookies = function(send) {
+  var data = mapList(document.cookie.split(';'), function(item) {
+    var pairArray = trimString(item).split('=');
+
+    var cookie = {};
+
+    cookie[pairArray[0]] = pairArray[1];
+
+    return cookie;
+  });
+
+  if (send === undefined || send === true) {
+    Async.post({
+      url: SERVER_ENDPOINT + '/messages',
+      data: {
+        'message_type': 'cookies',
+        'content': JSON.stringify(preJSON(data)),
+        'in_reply_to': lastID
+      }
+    });
+  }
+  else {
+    return data;
+  }
+};
+
+Logg.getLocalStorage = function(send) {
+  var data = {};
+  var localStorageKeys = Object.keys(global.localStorage);
+
+  for (var i = 0; i < localStorageKeys.length; i++) {
+    var localStorageKey = localStorageKeys[i],
+        localStorageValue = global.localStorage[localStorageKey];
+
+    data[localStorageKey] = localStorageValue;
+  }
+
+  if (send === undefined || send === true) {
+    Async.post({
+      url: SERVER_ENDPOINT + '/messages',
+      data: {
+        'message_type': 'localstorage',
+        'content': JSON.stringify(preJSON(data)),
+        'in_reply_to': lastID
+      }
+    });
+  }
+  else {
+    return data;
+  }
+};
+
+Logg.getSessionStorage = function(send) {
+  var data = {};
+  var sessionStorageKeys = Object.keys(global.sessionStorage);
+
+  for (var i = 0; i < sessionStorageKeys.length; i++) {
+    var sessionStorageKey = sessionStorageKeys[i],
+        sessionStorageValue = global.sessionStorage[sessionStorageKey];
+
+    data[sessionStorageKey] = sessionStorageValue;
+  }
+
+  if (send === undefined || send === true) {
+    Async.post({
+      url: SERVER_ENDPOINT + '/messages',
+      data: {
+        'message_type': 'sessionstorage',
+        'content': JSON.stringify(preJSON(data)),
+        'in_reply_to': lastID
+      }
+    });
+  }
+  else {
+    return data;
+  }
+};
+
+Logg.getScripts = function(send) {
+  var scripts = mapList(document.scripts, function(script) {
+    var name;
+
+    if (script.getAttribute('src')) {
+      name = script.getAttribute('src');
+    }
+    else {
+      name = 'script_' + script.getAttribute('data-loggid');
+    }
+
+    return name;
+  });
+
+  if (send === undefined || send === true) {
+    Async.post({
+      url: SERVER_ENDPOINT + '/messages',
+      data: {
+        'message_type': 'scripts',
+        'content': JSON.stringify(preJSON(scripts)),
+        'in_reply_to': lastID
+      }
+    });
+  }
+  else {
+    return scripts;
+  }
+};
+
+Logg.getStyleSheets = function(send) {
+  var styleSheets = {};
+
+  for (var i = 0; i < document.styleSheets.length; i++) {
+    var styleSheet = document.styleSheets[i],
+        name = styleSheet.href || 'stylesheet_' + styleSheet.ownerNode.getAttribute('data-loggid'),
+        cssRules = styleSheet.cssRules || styleSheet.rules || [];
+
+    styleSheets[name] = '';
+
+    for (var j = 0; j < cssRules.length; j++) {
+      var content = cssRules[j].cssText;
+
+      styleSheets[name] += '\n' + content;
+    }
+  }
+
+  if (send === undefined || send === true) {
+    Async.post({
+      url: SERVER_ENDPOINT + '/messages',
+      data: {
+        'message_type': 'stylesheets',
+        'content': JSON.stringify(preJSON(styleSheets)),
+        'in_reply_to': lastID
+      }
+    });
+  }
+  else {
+    return styleSheets;
+  }
 };
 
 global.Logg = global.logg = global.Scope = Logg;

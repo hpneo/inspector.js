@@ -69,6 +69,14 @@ module.exports = function(grunt) {
           {
             src: 'inspector_production.min.js',
             dest: '../logg.io/public/inspector_production.js'
+          },
+          {
+            src: 'inspector_development.js',
+            dest: '../logg.io/public/inspector_development.debug.js'
+          },
+          {
+            src: 'inspector_production.js',
+            dest: '../logg.io/public/inspector_production.debug.js'
           }
         ]
       }
