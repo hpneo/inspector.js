@@ -525,7 +525,7 @@ function createIdentifier() {
 function extractSettings(options) {
   var baseIdentifier = options.identifier,
       computedIdentifier = createIdentifier(),
-      endpoint = (options.endpoint || "http://localhost:3000/endpoint"),
+      endpoint = (options.endpoint || "https://domscope.com/endpoint"),
       alertOnError = (typeof options.alertOnError === 'boolean') ? options.alertOnError : false,
       settings = {
         'navigator': global.navigator.userAgent,
