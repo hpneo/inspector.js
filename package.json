@@ -6,7 +6,7 @@
   "scripts": {
     "test": "gulp test",
     "build": "NODE_ENV=development SERVER_ENDPOINT=http://localhost:3000/endpoint gulp build build_copy",
-    "dist": "NODE_ENV=production SERVER_ENDPOINT=https://domscope.com/endpoint gulp dist dist_copy"
+    "dist": "NODE_ENV=production SERVER_ENDPOINT=http://domscope.com/endpoint gulp dist dist_copy"
   },
   "repository": {
     "type": "git",
