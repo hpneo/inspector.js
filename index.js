@@ -88,7 +88,7 @@ Scope.sendMessage = function(data) {
   data['in_reply_to'] = this.lastID;
   data['client_key'] = this.settings.clientKey;
 
-  console.log('sendMessage', this.settings.clientKey);
+  // console.log('sendMessage', this.settings.clientKey);
 
   global.Scope.client.publish('/messages/' + this.deviceID, data);
 };
