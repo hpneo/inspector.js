@@ -223,16 +223,14 @@ function getBoxModel(selector, send) {
     'scrollHeight': element.scrollHeight
   };
 
-  var data = {
-    'type': 'box_model',
-    'content': JSON.stringify(content)
-  };
-
   if (send === undefined || send === true) {
-    global.Scope.sendMessage(data);
+    global.Scope.sendMessage({
+      'type': 'box_model',
+      'content': JSON.stringify(content)
+    });
   }
   else {
-    return data;
+    return content;
   }
 }
 
@@ -302,16 +300,14 @@ function getComputedStyle(selector, send) {
 
   element = computedStyles = null;
 
-  var data = {
-    'type': 'computed_style',
-    'content': JSON.stringify(content)
-  };
-
   if (send === undefined || send === true) {
-    global.Scope.sendMessage(data);
+    global.Scope.sendMessage({
+      'type': 'computed_style',
+      'content': JSON.stringify(content)
+    });
   }
   else {
-    return data;
+    return content;
   }
 }
 
@@ -322,16 +318,14 @@ function getElementProperties(selector, send) {
 
   var element = global.document.querySelector(selector);
 
-  var data = {
-    'type': 'element_properties',
-    'content': JSON.stringify(internalMethods.preJSON(element))
-  };
-
   if (send === undefined || send === true) {
-    global.Scope.sendMessage(data);
+    global.Scope.sendMessage({
+      'type': 'element_properties',
+      'content': JSON.stringify(internalMethods.preJSON(element))
+    });
   }
   else {
-    return data;
+    return internalMethods.preJSON(element);
   }
 }
 
@@ -362,16 +356,14 @@ function getElementStyles(selector, send) {
     });
   });
 
-  var data = {
-    'type': 'element_styles',
-    'content': JSON.stringify(internalMethods.preJSON(elementStyles))
-  };
-
   if (send === undefined || send === true) {
-    global.Scope.sendMessage(data);
+    global.Scope.sendMessage({
+      'type': 'element_styles',
+      'content': JSON.stringify(internalMethods.preJSON(elementStyles))
+    });
   }
   else {
-    return data;
+    return internalMethods.preJSON(elementStyles);
   }
 }
 
@@ -397,16 +389,14 @@ function getElementEvents(selector, send) {
     elementEvents = global.Scope.globalEvents[elementEventsIndex];
   }
 
-  var data = {
-    'type': 'element_events',
-    'content': JSON.stringify(internalMethods.preJSON(elementEvents))
-  };
-
   if (send === undefined || send === true) {
-    global.Scope.sendMessage(data);
+    global.Scope.sendMessage({
+      'type': 'element_events',
+      'content': JSON.stringify(internalMethods.preJSON(elementEvents))
+    });
   }
   else {
-    return data;
+    return internalMethods.preJSON(elementEvents);
   }
 }
 
@@ -420,10 +410,10 @@ function inspect(selector) {
   var data = {
     'type': 'element_inspect',
     'content': JSON.stringify({
-      boxModel: boxModel,
+      styles: styles,
       computedStyle: computedStyle,
       properties: properties,
-      styles: styles,
+      boxModel: boxModel,
       events: events
     })
   };
@@ -604,7 +594,7 @@ function cssStyleDeclarationToObject(style) {
   return cssObject;
 }
 
-function preJSON(object) {
+function preJSON(object, parent) {
   var linearObject,
       isPrimitiveString = (typeof object === 'string'),
       isPrimitiveNumber = (typeof object === 'number'),
@@ -613,8 +603,17 @@ function preJSON(object) {
       isInstanceOfNumber = (object instanceof Number),
       isInstanceOfBoolean = (object instanceof Boolean),
       isInstanceOfArray = (object instanceof Array),
-      isInstanceOfNodeList = (object instanceof NodeList),
-      isInstanceOfHTMLCollection = (object instanceof HTMLCollection);
+      isInstanceOfDocumentType = (object && object.nodeType && object.nodeType === 10),
+      isInstanceOfNamedNodeMap = (global.NamedNodeMap && object instanceof global.NamedNodeMap),
+      isInstanceOfDOMTokenList = (global.DOMTokenList && object instanceof global.DOMTokenList),
+      isInstanceOfDOMStringMap = (global.DOMStringMap && object instanceof global.DOMStringMap),
+      isInstanceOfNodeList = (global.NodeList && object instanceof global.NodeList),
+      isInstanceOfHTMLCollection = (global.HTMLCollection && object instanceof global.HTMLCollection),
+      isInstanceOfCSSStyleDeclaration = (global.CSSStyleDeclaration && object instanceof global.CSSStyleDeclaration);
+
+  if (object === parent) {
+    return object + '';
+  }
 
   if (isPrimitiveString || isPrimitiveNumber || isPrimitiveBoolean) {
     linearObject = object;
@@ -654,41 +653,73 @@ function preJSON(object) {
 
     linearObject[object.name] = object.nodeValue;
   }
-  else if (object instanceof HTMLElement) {
-    linearObject = {};
+  else if (isInstanceOfDocumentType) {
+    var nodeTag = object.name +
+        (object.publicId ? ' PUBLIC "' + object.publicId + '"' : '') +
+        (!object.publicId && object.systemId ? ' SYSTEM' : '') +
+        (object.systemId ? ' "' + object.systemId + '"' : '');
 
+    linearObject = '<!DOCTYPE ' + nodeTag + '>';
+  }
+  else if (object instanceof HTMLElement) {
     var keys = objectKeys(object),
         value;
 
-    forEach(keys, function(key) {
+    linearObject = {};
+
+    forEach(keys, function forEachHTMLElement(key) {
       try {
         value = object[key]
-      }catch(e) {
+      } catch(e) {
         value = undefined;
       }
 
       if (value instanceof HTMLElement) {
         value = elementToSelector(value);
       }
+      else if (value instanceof Text) {
+        value = value.nodeValue;
+      }
 
-      linearObject[key] = preJSON(value);
+      linearObject[key] = preJSON(value, object);
     });
   }
   else if (isInstanceOfArray || isInstanceOfNodeList || isInstanceOfHTMLCollection) {
-    linearObject = map(object, function(item) {
+    linearObject = map(object, function mapHTMLCollection(item) {
       if (item instanceof HTMLElement) {
         item = elementToSelector(item);
       }
+      else if (item instanceof Text) {
+        item = item.nodeValue;
+      }
 
-      return preJSON(item);
+      return preJSON(item, object);
     });
   }
-  else if (object instanceof Object) {
+  else if (isInstanceOfNamedNodeMap) {
     linearObject = {};
+
+    forEach(object, function(item) {
+      linearObject[item.nodeName] = item.nodeValue;
+    });
+  }
+  else if (isInstanceOfDOMStringMap || isInstanceOfDOMTokenList) {
+    linearObject = {};
+
+    forEach(object, function(value, key) {
+      linearObject[key] = value;
+    });
+  }
+  else if (isInstanceOfCSSStyleDeclaration) {
+    linearObject = cssStyleDeclarationToObject(object);
+  }
+  else if (object instanceof Object) {
     var keys = objectKeys(object);
 
+    linearObject = {};
+
     forEach(keys, function(key) {
-      linearObject[key] = preJSON(object[key]);
+      linearObject[key] = preJSON(object[key], object);
     })
   }
 
@@ -881,10 +912,10 @@ module.exports = {
 'use strict';
 
 function initHighlight() {
-  var marginContainer = document.createElement('div'),
-      borderContainer = document.createElement('div'),
-      paddingContainer = document.createElement('div'),
-      contentContainer = document.createElement('div');
+  var marginContainer = global.document.createElement('div'),
+      borderContainer = global.document.createElement('div'),
+      paddingContainer = global.document.createElement('div'),
+      contentContainer = global.document.createElement('div');
 
   marginContainer.id = 'margin_container';
   borderContainer.id = 'border_container';
