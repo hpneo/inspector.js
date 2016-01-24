@@ -89,6 +89,7 @@ Scope.sendMessage = function(data) {
   data['device_id'] = this.deviceID;
   data['in_reply_to'] = this.lastID;
   data['client_key'] = this.settings.clientKey;
+  data['persist'] = (data['persist'] === undefined) ? true : data['persist'];
 
   // console.log('sendMessage', this.settings.clientKey);
 
@@ -167,7 +168,7 @@ var filter = require('lodash-compat/collection/filter'),
     map = require('lodash-compat/collection/map'),
     internalMethods = require('./internal_methods');
 
-function getDOM() {
+function getDOM(send) {
   var node = document.doctype,
       doctypeHTML = '';
 
@@ -184,7 +185,8 @@ function getDOM() {
     'type': 'dom',
     'content': doctypeHTML + document.documentElement.outerHTML,
     'in_reply_to': global.Scope.lastID,
-    'device_id': global.Scope.deviceID
+    'device_id': global.Scope.deviceID,
+    'persist': send
   };
 
   global.Scope.sendMessage(data);
@@ -897,6 +899,38 @@ function trackLocation() {
   global.Scope.sendMessage(data);
 };
 
+function getFeatures() {
+  var featuresList,
+      features = arguments;
+
+  if (features.length > 0) {
+    featuresList = {};
+
+    forEach(features, function(feature) {
+      if (feature instanceof RegExp) {
+        forEach(global.Modernizr, function(featureValue, featureName) {
+          if (featureName.match(feature)) {
+            featuresList[featureName] = global.Modernizr[featureName];
+          }
+        });
+      }
+      else {
+        featuresList[feature] = global.Modernizr[feature];
+      }
+    });
+  }
+  else {
+    featuresList = global.Modernizr;
+  }
+
+  var data = {
+    'type': 'features',
+    'content': JSON.stringify(featuresList)
+  };
+
+  global.Scope.sendMessage(data);
+}
+
 module.exports = {
   trackLocation: trackLocation,
   getNavigator: getNavigator,
@@ -904,7 +938,8 @@ module.exports = {
   getLocalStorage: getLocalStorage,
   getSessionStorage: getSessionStorage,
   getScripts: getScripts,
-  getStyleSheets: getStyleSheets
+  getStyleSheets: getStyleSheets,
+  getFeatures: getFeatures
 };
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{"./internal_methods":5,"lodash-compat/collection/forEach":11,"lodash-compat/collection/map":12,"lodash-compat/object/assign":73}],7:[function(require,module,exports){

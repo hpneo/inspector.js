@@ -87,6 +87,7 @@ Scope.sendMessage = function(data) {
   data['device_id'] = this.deviceID;
   data['in_reply_to'] = this.lastID;
   data['client_key'] = this.settings.clientKey;
+  data['persist'] = (data['persist'] === undefined) ? true : data['persist'];
 
   // console.log('sendMessage', this.settings.clientKey);
 
