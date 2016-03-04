@@ -544,7 +544,7 @@ function extractSettings(options) {
     settings.group = options.group;
   }
   else {
-    // settings.group = baseIdentifier.replace('-' + computedIdentifier, '');
+    settings.group = baseIdentifier.replace('-' + computedIdentifier, '');
   }
 
   return settings;
