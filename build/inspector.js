@@ -1000,6 +1000,10 @@ function highlightElement(element) {
     return false;
   }
 
+  if(!global.document.getElementById('margin_container')) {
+    initHighlight();
+  }
+
   var style = global.getComputedStyle(element),
       boundingRectangle = element.getBoundingClientRect(),
       clientWidth = element.clientWidth,
