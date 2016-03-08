@@ -345,15 +345,17 @@ function getElementStyles(selector, send) {
         cssRules = styleSheet.cssRules || styleSheet.rules || [];
 
     forEach(cssRules, function(cssRule) {
-      var selectorText = cssRule.selectorText;
+      if (cssRule instanceof CSSStyleRule) {
+        var selectorText = cssRule.selectorText;
 
-      if (internalMethods.matchesSelector(element, selectorText)) {
-        elementStyles[selectorText] = elementStyles[selectorText] || [];
+        if (internalMethods.matchesSelector(element, selectorText)) {
+          elementStyles[selectorText] = elementStyles[selectorText] || [];
 
-        var elementStyle = {};
-        elementStyle[href] = internalMethods.cssStyleDeclarationToObject(cssRule.style);
+          var elementStyle = {};
+          elementStyle[href] = internalMethods.cssStyleDeclarationToObject(cssRule.style);
 
-        elementStyles[selectorText].push(elementStyle);
+          elementStyles[selectorText].push(elementStyle);
+        }
       }
     });
   });
@@ -575,13 +577,17 @@ function objectKeys(object) {
 }
 
 function matchesSelector(element, selector) {
-  var matchesSelectorFn = element.webkitMatchesSelector || element.mozMatchesSelector || element.msMatchesSelector || element.oMatchesSelector || element.matchesSelector || element.matches;
+  var matchesSelectorFn = element.matchesSelector || element.matches || element.webkitMatchesSelector || element.mozMatchesSelector || element.msMatchesSelector || element.oMatchesSelector;
 
   if (matchesSelectorFn === undefined) {
     return false;
   }
   else {
-    return matchesSelectorFn.call(element, selector);
+    try {
+      return matchesSelectorFn.call(element, selector);
+    } catch (e) {
+      return false;
+    }
   }
 }
 
