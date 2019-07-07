@@ -50,14 +50,14 @@ gulp.task('build', [ 'lint', 'jscs', 'browserify' ]);
 
 gulp.task('build_copy', ['build'], function() {
   gulp.src(buildDir + '/inspector.js')
-    .pipe(rename('inspector_development.js'))
-    .pipe(gulp.dest('/Users/hpneo/Development/domscope/app/assets/javascripts/inspector'));
+    .pipe(rename('development.js'))
+    .pipe(gulp.dest('../domscope/app/assets/javascripts/inspector'));
 });
 
 gulp.task('dist_copy', ['dist'], function() {
   gulp.src(buildDir + '/inspector.min.js')
-    .pipe(rename('inspector_production.js'))
-    .pipe(gulp.dest('/Users/hpneo/Development/domscope/app/assets/javascripts/inspector'));
+    .pipe(rename('production.js'))
+    .pipe(gulp.dest('../domscope/app/assets/javascripts/inspector'));
 });
 
 gulp.task('watch', function() {

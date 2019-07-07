@@ -7,41 +7,48 @@ var Scope = {},
     forEach = require('lodash-compat/collection/forEach'),
     internalMethods = require('./lib/internal_methods');
 
-Scope.initialize = Scope.register = function(options) {
-  this.settings = internalMethods.extractSettings(options);
+function afterRegister(self, data) {
+  if (data) {
+    if ('error' in data) {
+      alert(data['error']);
+    }
+    else {
+      self.deviceID = data.device_id;
+      self.deviceGroupID = data.device_group_id;
 
-  var data = pick(this.settings, ['identifier', 'navigator', 'name', 'clientKey', 'group']);
+      if (self.deviceID) {
+        self.createClient();
+        self.trackLocation();
 
-  var request = internalMethods.post(this.settings.endpoint.replace('/endpoint', '') + '/devices/register', data),
-      self = this;
-
-  request.then(function(response) {
-    var data = response.body;
-
-    if (data) {
-      if ('error' in data) {
-        alert(data['error']);
-      }
-      else {
-        self.deviceID = data['device_id'];
-        self.deviceGroupID = data['device_group_id'];
-
-        if (self.deviceID) {
-          self.createClient();
-          self.trackLocation();
-
-          self.log('DOMScope is working now');
-          self.isRegistered = true;
-        }
+        self.log('DOMScope is working now');
+        self.isRegistered = true;
       }
     }
-  });
+  }
+}
+
+Scope.initialize = Scope.register = function register(options) {
+  this.settings = internalMethods.extractSettings(options);
+
+  if (options.device_id) {
+    afterRegister(this, options);
+  }
+  else {
+    var data = pick(this.settings, ['identifier', 'navigator', 'name', 'clientKey', 'group']);
+
+    var request = internalMethods.post(this.settings.endpoint.replace('/endpoint', '') + '/devices/register.json', data),
+        self = this;
+
+    request.then(function onRequestSuccess(response) {
+      afterRegister(self, response.body);
+    });
+  }
 
   internalMethods.mapDOM(global.document.documentElement);
   global.addEventListener('load', this.initHighlight);
 };
 
-Scope.createClient = function() {
+Scope.createClient = function createClient() {
   var deviceID = this.deviceID;
 
   this.client = new global.Faye.Client(this.settings.endpoint);
