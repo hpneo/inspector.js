@@ -990,7 +990,7 @@ function getFeatures() {
   global.Scope.sendMessage(data);
 }
 
-function screenshot(selector) {
+function takeScreenshot(selector) {
   var self = this;
 
   html2canvas(
@@ -1030,7 +1030,7 @@ module.exports = {
   getScripts: getScripts,
   getStyleSheets: getStyleSheets,
   getFeatures: getFeatures,
-  screenshot: screenshot
+  takeScreenshot: takeScreenshot
 };
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{"../vendor/html2canvas":113,"../vendor/modernizr":114,"./internal_methods":5,"lodash-compat/collection/forEach":11,"lodash-compat/collection/map":12,"lodash-compat/object/assign":73,"promised-xhr":84}],8:[function(require,module,exports){
