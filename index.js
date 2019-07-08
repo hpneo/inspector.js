@@ -36,7 +36,7 @@ Scope.initialize = Scope.register = function register(options) {
   else {
     var data = pick(this.settings, ['identifier', 'navigator', 'name', 'clientKey', 'group']);
 
-    var request = internalMethods.post(this.settings.endpoint.replace('/endpoint', '') + '/devices/register.json', data),
+    var request = internalMethods.post(this.settings.endpoint.replace('/endpoint', '/devices/register.json'), data),
         self = this;
 
     request.then(function onRequestSuccess(response) {
@@ -131,12 +131,14 @@ var EventInjection = require('./lib/event_injection'),
     DOM = require('./lib/dom'),
     Debug = require('./lib/debug'),
     Visual = require('./lib/visual'),
-    Utility = require('./lib/utility');
+    Utility = require('./lib/utility'),
+    Request = require('./lib/request');
 
 assign(Scope, EventInjection);
 mixin(Scope, Debug);
 mixin(Scope, Visual);
 mixin(Scope, DOM);
 mixin(Scope, Utility);
+mixin(Scope, Request);
 
 global.Scope = global.Inspector = Scope;
